@@ -1,4 +1,4 @@
-module go-jwt-middleware
+module github.com/soumyakantiroychowdhury/go-jwt-middleware
 
 go 1.13
 
