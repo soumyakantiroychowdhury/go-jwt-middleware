@@ -52,10 +52,16 @@ type Options struct {
 	SigningMethod jwt.SigningMethod
 }
 
+// JWTMiddleware is the struct with interface methods exposed
 type JWTMiddleware struct {
 	Options Options
 }
 
+// ClaimValidatorFunc is the function type that the caller need to pass. The function should
+// return error as nil if it finds everything is alright.
+type ClaimValidatorFunc func(jwt.MapClaims) error
+
+// OnError : 
 func OnError(w http.ResponseWriter, r *http.Request, err string) {
 	http.Error(w, err, http.StatusUnauthorized)
 }
@@ -103,6 +109,7 @@ func (m *JWTMiddleware) HandlerWithNext(w http.ResponseWriter, r *http.Request, 
 	}
 }
 
+// Handler is the middleware entrypoint
 func (m *JWTMiddleware) Handler(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Let secure process the request. If it returns an error,
@@ -111,6 +118,36 @@ func (m *JWTMiddleware) Handler(h http.Handler) http.Handler {
 
 		// If there was an error, do not continue.
 		if err != nil {
+			return
+		}
+
+		h.ServeHTTP(w, r)
+	})
+}
+
+// HandlerWithClaimValidation is similar to Handler(), except that it will verify the
+// received claim (available as a context in r) with input parameters
+func (m *JWTMiddleware) HandlerWithClaimValidation(h http.Handler, fn ClaimValidatorFunc) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Let secure process the request. If it returns an error,
+		// that indicates the request should not continue.
+		err := m.CheckJWT(w, r)
+
+		// If there was an error, do not continue.
+		if err != nil {
+			return
+		}
+
+		// Pass the claims in the received token to the callback function for additional validation
+		parsedToken, ok := r.Context().Value(m.Options.UserProperty).(*jwt.Token)
+		if !ok {
+			return
+		}
+		parsedClaims, ok := parsedToken.Claims.(jwt.MapClaims)
+		if !ok {
+			return
+		}
+		if err = fn(parsedClaims); err != nil {
 			return
 		}
 
@@ -160,6 +197,7 @@ func FromFirst(extractors ...TokenExtractor) TokenExtractor {
 	}
 }
 
+// CheckJWT : 
 func (m *JWTMiddleware) CheckJWT(w http.ResponseWriter, r *http.Request) error {
 	if !m.Options.EnableAuthOnOptions {
 		if r.Method == "OPTIONS" {
