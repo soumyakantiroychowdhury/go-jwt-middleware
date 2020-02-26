@@ -61,7 +61,7 @@ type JWTMiddleware struct {
 // return error as nil if it finds everything is alright.
 type ClaimValidatorFunc func(jwt.MapClaims) error
 
-// OnError : 
+// OnError :
 func OnError(w http.ResponseWriter, r *http.Request, err string) {
 	http.Error(w, err, http.StatusUnauthorized)
 }
@@ -197,7 +197,7 @@ func FromFirst(extractors ...TokenExtractor) TokenExtractor {
 	}
 }
 
-// CheckJWT : 
+// CheckJWT :
 func (m *JWTMiddleware) CheckJWT(w http.ResponseWriter, r *http.Request) error {
 	if !m.Options.EnableAuthOnOptions {
 		if r.Method == "OPTIONS" {
