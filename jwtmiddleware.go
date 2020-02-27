@@ -141,13 +141,16 @@ func (m *JWTMiddleware) HandlerWithClaimValidation(h http.Handler, fn ClaimValid
 		// Pass the claims in the received token to the callback function for additional validation
 		parsedToken, ok := r.Context().Value(m.Options.UserProperty).(*jwt.Token)
 		if !ok {
+			m.Options.ErrorHandler(w, r, "Unexpected token")
 			return
 		}
 		parsedClaims, ok := parsedToken.Claims.(jwt.MapClaims)
 		if !ok {
+			m.Options.ErrorHandler(w, r, "Unexpected token")
 			return
 		}
 		if err = fn(parsedClaims); err != nil {
+			m.Options.ErrorHandler(w, r, "User validation of token claims failed")
 			return
 		}
 
