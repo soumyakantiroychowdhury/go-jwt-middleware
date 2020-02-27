@@ -173,6 +173,49 @@ jwtmiddleware.New(jwtmiddleware.Options{
 })
 ```
 
+### Validation of Claims
+
+You may need to define a claim like the following:
+
+```go
+type Claims struct {
+	Email     string        `json:"email"`
+	Privilege int           `json:"privilege"`
+	jwt.StandardClaims
+}
+```
+And you wish to restrict certain APIs for users with certain privilege value, say 0. Define a function
+as below:
+
+```go
+func ValidateAdminClaim (c jwt.MapClaims) error {
+	if c["privilege"] != float64(0) {
+		return errors.New("Unauthorized API access")
+	}
+  return nil
+}
+```
+
+The funtion type must be:
+
+```go
+type ClaimValidatorFunc func(jwt.MapClaims) error
+```
+
+Call your handler as below:
+
+```go
+...
+r := mux.NewRouter()
+...
+_ = r.Handle("/api/users", JWTMiddleware.HandlerWithClaimValidation(getUsersHandlerFunc,
+      helper.ValidateAdminClaim)).Methods("GET")
+```
+
+Note: Instead of passing this function in `Options`, I found it suitable to provide a new method 
+`HandlerWithClaimValidation` so that the user may choose to provide different validation functions 
+for different paths.
+
 ## Examples
 
 You can check out working examples in the [examples folder](https://github.com/auth0/go-jwt-middleware/tree/master/examples)
@@ -183,7 +226,9 @@ You can check out working examples in the [examples folder](https://github.com/a
 This project is forked from https://github.com/auth0/go-jwt-middleware.
 [Auth0](auth0.com)
 
-I made the changes for validation of received claims before dispatching the control to handler functions.
+I made the changes for validation of received claims (particularly useful when you have custom claims) before dispatching the control to handler functions.
+
+The new method added is `HandlerWithClaimValidation(h http.Handler, fn ClaimValidatorFunc) http.Handler`.
 
 ## License
 
